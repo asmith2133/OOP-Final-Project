@@ -11,7 +11,6 @@ public class TicTacToeGUI {
     private JLabel xScoreLabel, oScoreLabel, drawLabel;
     private int boardSize = 3; // Default board size
     private String currentPlayer = "X"; // Default starting player
-    private int xScore = 0, oScore = 0, drawCount = 0;
 
     public TicTacToeGUI() {
         frame = new JFrame("Tic-Tac-Toe");
@@ -24,7 +23,7 @@ public class TicTacToeGUI {
         controlPanel.setLayout(new BoxLayout(controlPanel, BoxLayout.Y_AXIS));
 
         difficultyBox = new JComboBox<>(new String[]{"Easy", "Medium", "Hard"});
-        boardColorBox = new JComboBox<>(new String[]{"Red", "White", "Blue"});
+        boardColorBox = new JComboBox<>(new String[]{"Gray", "White", "Blue"});
         playerColorBox = new JComboBox<>(new String[]{"Black", "Red", "Green"});
         boardSizeBox = new JComboBox<>(new String[]{"3x3", "4x4", "5x5"});
 
@@ -101,16 +100,10 @@ public class TicTacToeGUI {
                     JButton sourceButton = (JButton) e.getSource();
                     if (sourceButton.getText().equals("")) {  // If the button is empty
                         sourceButton.setText(currentPlayer);  // Set the text to the current player
+                        switchPlayer();  // Switch the player after every click
                         if (checkWinner()) {
+                            // Show a message if there's a winner
                             JOptionPane.showMessageDialog(frame, currentPlayer + " wins!");
-                            updateScore();
-                            disableButtons();
-                        } else if (isBoardFull()) {
-                            JOptionPane.showMessageDialog(frame, "It's a Draw!");
-                            updateScore();
-                            disableButtons();
-                        } else {
-                            switchPlayer();  // Switch the player after every click
                         }
                     }
                 });
@@ -126,11 +119,11 @@ public class TicTacToeGUI {
         for (int i = 0; i < boardSize; i++) {
             for (int j = 0; j < boardSize; j++) {
                 buttons[i][j].setText(""); // Clear the board
-                buttons[i][j].setEnabled(true);  // Re-enable buttons
                 buttons[i][j].setBackground(null); // Reset background color
             }
         }
-        currentPlayer = "X"; // Reset to the starting player
+        currentPlayer = "X"; // Reset the starting player
+        enableBoard(); // Re-enable the board
     }
 
     private void updateBoardSize() {
@@ -141,6 +134,60 @@ public class TicTacToeGUI {
             case "5x5" -> boardSize = 5;
         }
         createBoard();
+    }
+
+    private boolean checkWinner() {
+        // Check rows
+        for (int i = 0; i < boardSize; i++) {
+            if (buttons[i][0].getText().equals(currentPlayer) &&
+                    buttons[i][1].getText().equals(currentPlayer) &&
+                    buttons[i][2].getText().equals(currentPlayer)) {
+                // Highlight the winning buttons
+                buttons[i][0].setBackground(Color.GREEN);
+                buttons[i][1].setBackground(Color.GREEN);
+                buttons[i][2].setBackground(Color.GREEN);
+                return true; // Winning row
+            }
+            if (buttons[0][i].getText().equals(currentPlayer) &&
+                    buttons[1][i].getText().equals(currentPlayer) &&
+                    buttons[2][i].getText().equals(currentPlayer)) {
+                // Highlight the winning buttons
+                buttons[0][i].setBackground(Color.GREEN);
+                buttons[1][i].setBackground(Color.GREEN);
+                buttons[2][i].setBackground(Color.GREEN);
+                return true; // Winning column
+            }
+        }
+
+        // Check diagonals
+        if (buttons[0][0].getText().equals(currentPlayer) &&
+                buttons[1][1].getText().equals(currentPlayer) &&
+                buttons[2][2].getText().equals(currentPlayer)) {
+            // Highlight the winning buttons
+            buttons[0][0].setBackground(Color.GREEN);
+            buttons[1][1].setBackground(Color.GREEN);
+            buttons[2][2].setBackground(Color.GREEN);
+            return true; // Winning diagonal
+        }
+        if (buttons[0][2].getText().equals(currentPlayer) &&
+                buttons[1][1].getText().equals(currentPlayer) &&
+                buttons[2][0].getText().equals(currentPlayer)) {
+            // Highlight the winning buttons
+            buttons[0][2].setBackground(Color.GREEN);
+            buttons[1][1].setBackground(Color.GREEN);
+            buttons[2][0].setBackground(Color.GREEN);
+            return true; // Winning diagonal
+        }
+
+        return false;
+    }
+
+    private void enableBoard() {
+        for (int i = 0; i < boardSize; i++) {
+            for (int j = 0; j < boardSize; j++) {
+                buttons[i][j].setEnabled(true); // Re-enable all buttons
+            }
+        }
     }
 
     private void customizeComboBox(JComboBox<String> comboBox) {
@@ -182,74 +229,6 @@ public class TicTacToeGUI {
 
     private void switchPlayer() {
         currentPlayer = currentPlayer.equals("X") ? "O" : "X";  // Switch between X and O
-    }
-
-    private boolean checkWinner() {
-        // Check horizontal and vertical lines
-        for (int i = 0; i < boardSize; i++) {
-            if (checkLine(buttons[i][0], buttons[i][1], buttons[i][2])) {
-                highlightWinningLine(buttons[i][0], buttons[i][1], buttons[i][2]);
-                return true;
-            }
-            if (checkLine(buttons[0][i], buttons[1][i], buttons[2][i])) {
-                highlightWinningLine(buttons[0][i], buttons[1][i], buttons[2][i]);
-                return true;
-            }
-        }
-
-        // Check diagonals
-        if (checkLine(buttons[0][0], buttons[1][1], buttons[2][2])) {
-            highlightWinningLine(buttons[0][0], buttons[1][1], buttons[2][2]);
-            return true;
-        }
-        if (checkLine(buttons[0][2], buttons[1][1], buttons[2][0])) {
-            highlightWinningLine(buttons[0][2], buttons[1][1], buttons[2][0]);
-            return true;
-        }
-
-        return false;
-    }
-
-    private boolean checkLine(JButton b1, JButton b2, JButton b3) {
-        return b1.getText().equals(currentPlayer) && b2.getText().equals(currentPlayer) && b3.getText().equals(currentPlayer);
-    }
-
-    private void highlightWinningLine(JButton b1, JButton b2, JButton b3) {
-        b1.setBackground(Color.GREEN);
-        b2.setBackground(Color.GREEN);
-        b3.setBackground(Color.GREEN);
-    }
-
-    private boolean isBoardFull() {
-        for (int i = 0; i < boardSize; i++) {
-            for (int j = 0; j < boardSize; j++) {
-                if (buttons[i][j].getText().equals("")) {
-                    return false;
-                }
-            }
-        }
-        return true;
-    }
-
-    private void updateScore() {
-        if (currentPlayer.equals("X")) {
-            xScore++;
-            xScoreLabel.setText("X: " + xScore);
-        } else if (currentPlayer.equals("O")) {
-            oScore++;
-            oScoreLabel.setText("O: " + oScore);
-        } else {
-            drawCount++;
-            drawLabel.setText("Draw: " + drawCount);
-        }
-    }
-
-    private void disableButtons() {
-        for (int i = 0; i < boardSize; i++) {
-            for (int j = 0; j < boardSize; j++) {
-                buttons[i][j].setEnabled(false); // Disable all buttons
-            }
-        }
     }
 
     public static void main(String[] args) {
