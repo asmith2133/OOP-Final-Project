@@ -1,5 +1,4 @@
 import javax.swing.*;
-import javax.swing.border.EmptyBorder;
 import java.awt.*;
 
 public class TicTacToeGUI {
@@ -13,6 +12,7 @@ public class TicTacToeGUI {
     private String currentPlayer; // The current player will be passed from Player class
     private int xScore = 0, oScore = 0, drawCount = 0;
     private Color playerColor = Color.BLACK; // Default player color
+    private boolean gameOver = false;
 
     public TicTacToeGUI(String startingPlayer) {
         this.currentPlayer = startingPlayer; // Set the starting player based on the selection
@@ -37,7 +37,7 @@ public class TicTacToeGUI {
         customizeComboBox(boardSizeBox);
         customizeComboBox(difficultyBox);
 
-        playerColorBox.addActionListener(e -> updatePlayerColor());
+        playerColorBox.addActionListener(e -> updatePlayerColor());  // Only update player color on selection
 
         boardSizeBox.addActionListener(e -> updateBoardSize());
 
@@ -81,7 +81,8 @@ public class TicTacToeGUI {
         customizeButton(quitButton);
 
         quitButton.addActionListener(e -> System.exit(0)); // Closes the application on click
-        resetButton.addActionListener(e -> resetBoard()); // Resets the board
+        resetButton.addActionListener(e -> showResetCheckingPanel()); // Show the confirmation dialog
+
 
         bottomPanel.add(resetButton);
         bottomPanel.add(quitButton);
@@ -102,18 +103,25 @@ public class TicTacToeGUI {
                 buttons[i][j].setFont(new Font("Arial", Font.BOLD, 40));
                 buttons[i][j].setEnabled(true);  // Enable the button for clicking
                 buttons[i][j].addActionListener(e -> {
-                    // Only update the button if it hasn't been clicked already
+                    if (gameOver) return; // Do nothing if the game is over
                     JButton sourceButton = (JButton) e.getSource();
                     if (sourceButton.getText().equals("")) {  // If the button is empty
                         sourceButton.setText(currentPlayer);  // Set the text to the current player
                         sourceButton.setForeground(playerColor); // Set the color of the player
-                        switchPlayer();  // Switch the player after every click
                         if (checkWinner()) {
                             // Show a message if there's a winner
                             JOptionPane.showMessageDialog(frame, currentPlayer + " wins!");
-                            updateScore();
+                            updateScore();  // Update the score here, based on the current winner
+                            disableBoard();  // Disable the board after a winner is found
+                            gameOver = true;
+                        } else if (isBoardFull()) {
+                            JOptionPane.showMessageDialog(frame, "It's a draw!");
+                            drawCount++;
+                            drawLabel.setText("Draw: " + drawCount);
                             disableBoard();
+                            gameOver = true;
                         }
+                        switchPlayer();  // Switch the player after every click (if no winner yet)
                     }
                 });
                 boardPanel.add(buttons[i][j]);
@@ -123,6 +131,7 @@ public class TicTacToeGUI {
         boardPanel.revalidate();
         boardPanel.repaint();
     }
+
 
     private void updateBoardSize() {
         String selectedSize = (String) boardSizeBox.getSelectedItem();
@@ -170,6 +179,17 @@ public class TicTacToeGUI {
         return true;
     }
 
+    private boolean isBoardFull() {
+        for (int i = 0; i < boardSize; i++) {
+            for (int j = 0; j < boardSize; j++) {
+                if (buttons[i][j].getText().equals("")) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
     private void resetBoard() {
         for (int i = 0; i < boardSize; i++) {
             for (int j = 0; j < boardSize; j++) {
@@ -177,9 +197,69 @@ public class TicTacToeGUI {
                 buttons[i][j].setBackground(null); // Reset background color
             }
         }
-        currentPlayer = "X"; // Reset the starting player
+
+        // Re-enable the board and set the current player without overriding it
         enableBoard(); // Re-enable the board
+        gameOver = false; // Reset the game state
+        // Don't reset the player; keep the player selected from showPlayerSelectionPanel()
+
     }
+
+
+
+    //yes or no if the player at the reset wonder to continue with its same character or wants to change
+    private void showResetCheckingPanel() {
+        ResetChecking resetPanel = new ResetChecking(new JPanel(), currentPlayer, new ResetChecking.ResetSelectionListener() {
+            @Override
+            public void onResetConfirmed(boolean continueWithSamePlayer) {
+                if (continueWithSamePlayer) {
+                    resetBoard();  // Keep the same player and reset the board
+                } else {
+                    onPlayerSelectionRequested();  // Let the player choose their character again
+                }
+            }
+
+            @Override
+            public void onPlayerSelectionRequested() {
+                showPlayerSelectionPanel();  // Open the character selection screen
+            }
+        });
+
+        // Display the ResetChecking panel within a dialog
+        JOptionPane.showMessageDialog(frame, resetPanel, "Reset Game", JOptionPane.PLAIN_MESSAGE);
+    }
+
+
+    //reactivate the selection on the reset
+    private void showPlayerSelectionPanel() {
+        // Create the dialog to choose X or O
+        String[] options = {"X", "O"};
+        int choice = JOptionPane.showOptionDialog(frame,
+                "Choose your character:", // Message
+                "Player Selection", // Title
+                JOptionPane.DEFAULT_OPTION, // Option type
+                JOptionPane.QUESTION_MESSAGE, // Message type
+                null, // Icon
+                options, // Options
+                options[0]); // Default option (X)
+
+        // If "X" is selected
+        if (choice == 0) {
+            currentPlayer = "X";
+        }
+        // If "O" is selected
+        else if (choice == 1) {
+            currentPlayer = "O";
+        }
+
+        // Update the player color based on the selected character
+        updatePlayerColor();
+
+        // Reset the board and game state
+        resetBoard(); // Reset the board after the player selection
+    }
+
+
 
     private void updatePlayerColor() {
         String color = (String) playerColorBox.getSelectedItem();
@@ -191,14 +271,16 @@ public class TicTacToeGUI {
     }
 
     private void updateScore() {
+        // Check the winner, and update the score accordingly
         if (currentPlayer.equals("X")) {
-            oScore++; // O wins
-            oScoreLabel.setText("O: " + oScore);
-        } else {
-            xScore++; // X wins
+            xScore++;  // X wins
             xScoreLabel.setText("X: " + xScore);
+        } else if (currentPlayer.equals("O")) {
+            oScore++;  // O wins
+            oScoreLabel.setText("O: " + oScore);
         }
     }
+
 
     private void enableBoard() {
         for (int i = 0; i < boardSize; i++) {
