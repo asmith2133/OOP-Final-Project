@@ -6,16 +6,20 @@ public class TicTacToeGUI {
     private JPanel boardPanel, controlPanel;
     private JButton[][] buttons;
     private JButton resetButton, quitButton;
-    private JComboBox<String> difficultyBox, boardColorBox, playerColorBox, boardSizeBox;
+    private JComboBox<String> difficultyBox, boardColorBox, playerColorBox, opponentColorBox, boardSizeBox;
     private JLabel xScoreLabel, oScoreLabel, drawLabel;
     private int boardSize = 3; // Default board size
     private String currentPlayer; // The current player will be passed from Player class
     private int xScore = 0, oScore = 0, drawCount = 0;
     private Color playerColor = Color.BLACK; // Default player color
+    private Color xColor = Color.BLACK; // Default for Xs
+    private Color oColor = Color.RED; // Default for Os
     private boolean gameOver = false;
+    private boolean isHumanVsAI = true; // Set the Default as AI
 
-    public TicTacToeGUI(String startingPlayer) {
+    public TicTacToeGUI(String startingPlayer, boolean isHumanVsAI) {
         this.currentPlayer = startingPlayer; // Set the starting player based on the selection
+        this.isHumanVsAI = isHumanVsAI; // Set the starting player to an AI based on the selection
 
         frame = new JFrame("Tic-Tac-Toe");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -29,16 +33,19 @@ public class TicTacToeGUI {
         difficultyBox = new JComboBox<>(new String[]{"Easy", "Medium", "Hard"});
         boardColorBox = new JComboBox<>(new String[]{"Gray", "White", "Blue"});
         playerColorBox = new JComboBox<>(new String[]{"Black", "Red", "Green"});
+        opponentColorBox = new JComboBox<>(new String[]{"Red", "Green", "Blue"});
         boardSizeBox = new JComboBox<>(new String[]{"3x3", "4x4", "5x5"});
 
         // Customize Combo Boxes
         customizeComboBox(boardColorBox);
         customizeComboBox(playerColorBox);
+        customizeComboBox(opponentColorBox);
         customizeComboBox(boardSizeBox);
         customizeComboBox(difficultyBox);
 
         playerColorBox.addActionListener(e -> updatePlayerColor());  // Only update player color on selection
-
+        opponentColorBox.addActionListener(e -> updateOpponentColor());
+        boardColorBox.addActionListener(e -> updateBoardColor());
         boardSizeBox.addActionListener(e -> updateBoardSize());
 
         xScoreLabel = new JLabel("X: 0", SwingConstants.CENTER);
@@ -54,12 +61,21 @@ public class TicTacToeGUI {
         scorePanel.add(oScoreLabel);
 
         JPanel settingsPanel = new JPanel();
-        settingsPanel.add(new JLabel("Difficulty:"));
-        settingsPanel.add(difficultyBox);
+        if (isHumanVsAI) { // If the player goes against an AI the difficulty box will appear
+            settingsPanel.add(new JLabel("Difficulty:"));
+            settingsPanel.add(difficultyBox);
+            difficultyBox.setEnabled(true);
+        } else {
+            difficultyBox.setEnabled(false);
+        }
         settingsPanel.add(new JLabel("Board Color:"));
         settingsPanel.add(boardColorBox);
         settingsPanel.add(new JLabel("Player Color:"));
         settingsPanel.add(playerColorBox);
+        if (!isHumanVsAI) { // If the player is playing against another player, lets both choose their colors
+            settingsPanel.add(new JLabel("Player 2 Color:"));
+            settingsPanel.add(opponentColorBox);
+        }
         settingsPanel.add(new JLabel("Board Size:"));
         settingsPanel.add(boardSizeBox);
 
@@ -82,7 +98,6 @@ public class TicTacToeGUI {
 
         quitButton.addActionListener(e -> System.exit(0)); // Closes the application on click
         resetButton.addActionListener(e -> showResetCheckingPanel()); // Show the confirmation dialog
-
 
         bottomPanel.add(resetButton);
         bottomPanel.add(quitButton);
@@ -107,14 +122,27 @@ public class TicTacToeGUI {
                     JButton sourceButton = (JButton) e.getSource();
                     if (sourceButton.getText().equals("")) {  // If the button is empty
                         sourceButton.setText(currentPlayer);  // Set the text to the current player
-                        sourceButton.setForeground(playerColor); // Set the color of the player
+                        if (currentPlayer.equals("X")) {
+                            sourceButton.setForeground(xColor); // Set X color
+                        } else {
+                            sourceButton.setForeground(oColor); // Set O color
+                        }
                         if (checkWinner()) {
+                            // Play win/lose sound depending on who won
+                            if (isHumanVsAI && !currentPlayer.equals("X")) {
+                                new Thread(() -> SoundPlayer.playSound("sounds/lose.wav")).start();  // Human wins, AI loses
+                            } else {
+                                new Thread(() -> SoundPlayer.playSound("sounds/win.wav")).start();   // Win sound
+                            }
+
                             // Show a message if there's a winner
                             JOptionPane.showMessageDialog(frame, currentPlayer + " wins!");
                             updateScore();  // Update the score here, based on the current winner
                             disableBoard();  // Disable the board after a winner is found
                             gameOver = true;
                         } else if (isBoardFull()) {
+                            // Play draw sound
+                            new Thread(() -> SoundPlayer.playSound("sounds/draw.wav")).start();
                             JOptionPane.showMessageDialog(frame, "It's a draw!");
                             drawCount++;
                             drawLabel.setText("Draw: " + drawCount);
@@ -128,49 +156,87 @@ public class TicTacToeGUI {
             }
         }
 
+        updateBoardColor(); // Make sure board color is updated on board creation
+
         boardPanel.revalidate();
         boardPanel.repaint();
     }
 
-
     private void updateBoardSize() {
+        // Picks up the size for the board
         String selectedSize = (String) boardSizeBox.getSelectedItem();
+        // Selects the board size and stores it in boardSize
         switch (selectedSize) {
             case "3x3" -> boardSize = 3;
             case "4x4" -> boardSize = 4;
             case "5x5" -> boardSize = 5;
         }
+        // Makes a new board with the new size
         createBoard();
     }
 
+    private void updateBoardColor() {
+        // Picks up the color for the board
+        String color = (String) boardColorBox.getSelectedItem();
+        // Changes the color name into the color object
+        Color boardColor = switch (color) {
+            case "Gray" -> Color.GRAY;
+            case "White" -> Color.WHITE;
+            case "Blue" -> Color.BLUE;
+            default -> Color.GRAY;
+        };
+        // Applies selected color to the board panel
+        boardPanel.setBackground(boardColor);
+    }
+
+    private void updatePlayerColor() {
+        // Gets the color from the player
+        String color = (String) playerColorBox.getSelectedItem();
+        // Assigns the color to the x player
+        xColor = switch (color) {
+            case "Black" -> Color.BLACK;
+            case "Red" -> Color.RED;
+            case "Green" -> Color.GREEN;
+            default -> Color.BLACK;
+        };
+        // If the player is going against AI, assign the AI with a color
+        if (isHumanVsAI) {
+            oColor = (xColor == Color.BLACK) ? Color.RED : Color.BLACK; // auto-assign
+        }
+    }
+
+    private void updateOpponentColor() {
+        // If other player is not an AI, then this runs
+        if (!isHumanVsAI) {
+            // Gets the color from the other player
+            String color = (String) opponentColorBox.getSelectedItem();
+            // Assigns the color to the o player
+            oColor = switch (color) {
+                case "Red" -> Color.RED;
+                case "Green" -> Color.GREEN;
+                case "Blue" -> Color.BLUE;
+                default -> Color.RED;
+            };
+        }
+    }
+
     private boolean checkWinner() {
-        // Check rows and columns dynamically
         for (int i = 0; i < boardSize; i++) {
             if (isWinningLine(i, 0, 0, 1) || isWinningLine(0, i, 1, 0)) {
                 return true;
             }
         }
-
-        // Check diagonals
-        if (isWinningLine(0, 0, 1, 1) || isWinningLine(0, boardSize - 1, 1, -1)) {
-            return true;
-        }
-
-        return false;
+        return isWinningLine(0, 0, 1, 1) || isWinningLine(0, boardSize - 1, 1, -1);
     }
 
     private boolean isWinningLine(int startX, int startY, int dx, int dy) {
         String first = buttons[startX][startY].getText();
         if (first.equals("")) return false;
-
         for (int i = 1; i < boardSize; i++) {
             int x = startX + i * dx;
             int y = startY + i * dy;
-            if (!buttons[x][y].getText().equals(first)) {
-                return false;
-            }
+            if (!buttons[x][y].getText().equals(first)) return false;
         }
-        // Highlight the winning line
         for (int i = 0; i < boardSize; i++) {
             int x = startX + i * dx;
             int y = startY + i * dy;
@@ -180,122 +246,66 @@ public class TicTacToeGUI {
     }
 
     private boolean isBoardFull() {
-        for (int i = 0; i < boardSize; i++) {
-            for (int j = 0; j < boardSize; j++) {
-                if (buttons[i][j].getText().equals("")) {
-                    return false;
-                }
-            }
-        }
+        for (int i = 0; i < boardSize; i++)
+            for (int j = 0; j < boardSize; j++)
+                if (buttons[i][j].getText().equals("")) return false;
         return true;
     }
 
     private void resetBoard() {
-        for (int i = 0; i < boardSize; i++) {
+        for (int i = 0; i < boardSize; i++)
             for (int j = 0; j < boardSize; j++) {
-                buttons[i][j].setText(""); // Clear the board
-                buttons[i][j].setBackground(null); // Reset background color
+                buttons[i][j].setText("");
+                buttons[i][j].setBackground(null);
+                buttons[i][j].setEnabled(true);
             }
-        }
-
-        // Re-enable the board and set the current player without overriding it
-        enableBoard(); // Re-enable the board
-        gameOver = false; // Reset the game state
-        // Don't reset the player; keep the player selected from showPlayerSelectionPanel()
-
+        enableBoard();
+        gameOver = false;
     }
 
-
-
-    //yes or no if the player at the reset wonder to continue with its same character or wants to change
     private void showResetCheckingPanel() {
         ResetChecking resetPanel = new ResetChecking(new JPanel(), currentPlayer, new ResetChecking.ResetSelectionListener() {
-            @Override
-            public void onResetConfirmed(boolean continueWithSamePlayer) {
-                if (continueWithSamePlayer) {
-                    resetBoard();  // Keep the same player and reset the board
-                } else {
-                    onPlayerSelectionRequested();  // Let the player choose their character again
-                }
+            public void onResetConfirmed(boolean keepSame) {
+                if (keepSame) resetBoard();
+                else onPlayerSelectionRequested();
             }
-
-            @Override
             public void onPlayerSelectionRequested() {
-                showPlayerSelectionPanel();  // Open the character selection screen
+                showPlayerSelectionPanel();
             }
         });
-
-        // Display the ResetChecking panel within a dialog
         JOptionPane.showMessageDialog(frame, resetPanel, "Reset Game", JOptionPane.PLAIN_MESSAGE);
     }
 
-
-    //reactivate the selection on the reset
     private void showPlayerSelectionPanel() {
-        // Create the dialog to choose X or O
         String[] options = {"X", "O"};
-        int choice = JOptionPane.showOptionDialog(frame,
-                "Choose your character:", // Message
-                "Player Selection", // Title
-                JOptionPane.DEFAULT_OPTION, // Option type
-                JOptionPane.QUESTION_MESSAGE, // Message type
-                null, // Icon
-                options, // Options
-                options[0]); // Default option (X)
-
-        // If "X" is selected
-        if (choice == 0) {
-            currentPlayer = "X";
-        }
-        // If "O" is selected
-        else if (choice == 1) {
-            currentPlayer = "O";
-        }
-
-        // Update the player color based on the selected character
+        int choice = JOptionPane.showOptionDialog(frame, "Choose your character:", "Player Selection",
+                JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE, null, options, options[0]);
+        if (choice == 0) currentPlayer = "X";
+        else if (choice == 1) currentPlayer = "O";
         updatePlayerColor();
-
-        // Reset the board and game state
-        resetBoard(); // Reset the board after the player selection
-    }
-
-
-
-    private void updatePlayerColor() {
-        String color = (String) playerColorBox.getSelectedItem();
-        switch (color) {
-            case "Black" -> playerColor = Color.BLACK;
-            case "Red" -> playerColor = Color.RED;
-            case "Green" -> playerColor = Color.GREEN;
-        }
+        resetBoard();
     }
 
     private void updateScore() {
-        // Check the winner, and update the score accordingly
         if (currentPlayer.equals("X")) {
-            xScore++;  // X wins
+            xScore++;
             xScoreLabel.setText("X: " + xScore);
-        } else if (currentPlayer.equals("O")) {
-            oScore++;  // O wins
+        } else {
+            oScore++;
             oScoreLabel.setText("O: " + oScore);
         }
     }
 
-
     private void enableBoard() {
-        for (int i = 0; i < boardSize; i++) {
-            for (int j = 0; j < boardSize; j++) {
-                buttons[i][j].setEnabled(true); // Re-enable all buttons
-            }
-        }
+        for (JButton[] row : buttons)
+            for (JButton button : row)
+                button.setEnabled(true);
     }
 
     private void disableBoard() {
-        for (int i = 0; i < boardSize; i++) {
-            for (int j = 0; j < boardSize; j++) {
-                buttons[i][j].setEnabled(false); // Disable all buttons
-            }
-        }
+        for (JButton[] row : buttons)
+            for (JButton button : row)
+                button.setEnabled(false);
     }
 
     private void customizeComboBox(JComboBox<String> comboBox) {
@@ -304,24 +314,15 @@ public class TicTacToeGUI {
         comboBox.setForeground(Color.WHITE);
         comboBox.setOpaque(true);
         comboBox.setBorder(BorderFactory.createEmptyBorder());
-
         comboBox.setRenderer(new DefaultListCellRenderer() {
-            @Override
             public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
                 super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
                 setFont(new Font("Arial", Font.BOLD, 14));
-                if (isSelected) {
-                    setBackground(Color.BLACK);
-                    setForeground(Color.WHITE);
-                } else {
-                    setBackground(Color.DARK_GRAY);
-                    setForeground(Color.WHITE);
-                }
-                setOpaque(true);
+                setBackground(isSelected ? Color.BLACK : Color.DARK_GRAY);
+                setForeground(Color.WHITE);
                 return this;
             }
         });
-
         comboBox.setFocusable(false);
     }
 
@@ -336,26 +337,46 @@ public class TicTacToeGUI {
     }
 
     private void switchPlayer() {
-        currentPlayer = currentPlayer.equals("X") ? "O" : "X";  // Switch between X and O
+        currentPlayer = currentPlayer.equals("X") ? "O" : "X";
     }
 
     public static void main(String[] args) {
-        // Create the Player panel and display it first
+        JFrame adversaryFrame = new JFrame("Choose Opponent");
+        adversaryFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        adversaryFrame.setSize(400, 200);
+        JPanel panel = new JPanel(new GridLayout(3, 1));
+        JLabel label = new JLabel("Would you like to play against a Human or an AI?", SwingConstants.CENTER);
+        JButton humanButton = new JButton("Human");
+        JButton aiButton = new JButton("AI");
+        panel.add(label);
+        panel.add(humanButton);
+        panel.add(aiButton);
+        humanButton.addActionListener(e -> {
+            adversaryFrame.dispose();
+            showPlayerSelection(false);
+        });
+        aiButton.addActionListener(e -> {
+            adversaryFrame.dispose();
+            showPlayerSelection(true);
+        });
+        adversaryFrame.add(panel);
+        adversaryFrame.setVisible(true);
+    }
+
+    // Will display the window to have selection for symbol and player type
+    private static void showPlayerSelection(boolean isHumanVsAI) {
+        // Creates a new window for player selection
         JFrame playerFrame = new JFrame("Player Selection");
         playerFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         playerFrame.setSize(400, 200);
-
-        Player playerPanel = new Player(new Player.PlayerSelectionListener() {
-            @Override
-            public void onPlayerSelected(String player) {
-                // Close the player selection window
-                playerFrame.dispose();
-
-                // Create and display the Tic-Tac-Toe game window with the selected player
-                new TicTacToeGUI(player);  // Pass the selected player (X or O)
-            }
+        // Attaches the listener
+        Player playerPanel = new Player(player -> {
+            // Closes the window when selected
+            playerFrame.dispose();
+            // Launch the mode based on selections
+            new TicTacToeGUI(player, isHumanVsAI);
         });
-
+        // Add the panel into the frame
         playerFrame.add(playerPanel);
         playerFrame.setVisible(true);
     }
