@@ -1,44 +1,55 @@
-
-
 /*
 AI player class implements different difficulty levels: easy, medium, and hard.
- */
+*/
+import javax.swing.*;
+import java.util.Random;
 
 class AiPlayer extends Player {
     private String difficultyLvl; //Stores the difficulty level
-    private char opponentSymbol; //Stores the symbol of the human player
+    private String aiSymbol; //Stores the symbol of the human player
+    private String humanSymbol;
+    private TicTacToeGUI game;
 
     //Constructor for the AI player
-    public AiPlayer(String name, char opponentSymbol, String difficultyLvl) {
-        super(name, opponentSymbol);
+    public AiPlayer(String difficultyLvl, String aiSymbol, TicTacToeGUI game) {
+
         this.difficultyLvl = difficultyLvl;
+        this.aiSymbol = aiSymbol;
         //Determine opponent's symbol
-        this.opponentSymbol = (opponentSymbol == 'X') ? 'O' : 'X';
+        this.humanSymbol = aiSymbol.equals("X") ? "O" : "X";
+        this.game = game;
     }
 
     //Makes a move based on the difficulty level chosen.
     @Override
-    public void makeMove(gameBoard board) {
+    public void makeMove() {
         switch (difficultyLvl) {
-            case "Easy" -> makeEasyMove(board); //Uses random move
-            case "Medium" -> makeMediumMove(board); //Uses basic block strategy
-            case "Hard" -> makeHardMove(board); //Uses a minimax algorithm
+            case "Easy" :
+                makeEasyMove(); //Uses random move
+                break;
+            case "Medium" :
+                makeMediumMove();//Uses basic block strategy
+                break;
+            case "Hard" :
+                makeHardMove(); //Uses a minimax algorithm
+                break;
         }
     }
 
     //Easy difficulty move - makes a random move in an open space.
-    private void makeEasyMove(gameBoard board) {
-        java.util.Random rand = new java.util.Random();
+    private void makeEasyMove() {
+        Random rand = new Random();
         int row, column;
         do {
-            row = rand.nextInt(3);
-            column = rand.nextInt(3);
-        } while (!board.isSpotEmpty(row, column));
-        board.updateBoard(row, column, getSymbol());
+            row = rand.nextInt(game.getBoardSize());
+            column = rand.nextInt(game.getBoardSize());
+        } while (!game.isSpotEmpty(row, column));
+
+        game.makeAiMove(row, column, aiSymbol);
     }
 
     //Medium move - tries to win if possible, tries to block opponent if needed, otherwise just makes an easy move.
-    private void makeMediumMove(gameBoard board) {
+    private void makeMediumMove() {
         if (tryWinningMove(board)) return;
         if (blockOpponentMove(board)) return;
         makeEasyMove(board);
@@ -174,3 +185,5 @@ class AiPlayer extends Player {
         }
     }
 }
+
+
