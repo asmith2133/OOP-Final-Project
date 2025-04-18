@@ -3,7 +3,7 @@
 /*
 AI player class implements different difficulty levels: easy, medium, and hard.
  */
-
+/*
 class AiPlayer extends Player {
     private String difficultyLvl; //Stores the difficulty level
     private char opponentSymbol; //Stores the symbol of the human player
@@ -174,3 +174,4 @@ class AiPlayer extends Player {
         }
     }
 }
+*/

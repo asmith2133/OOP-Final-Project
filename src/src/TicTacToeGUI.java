@@ -160,6 +160,8 @@ public class TicTacToeGUI {
 
         boardPanel.revalidate();
         boardPanel.repaint();
+        resetBoard(); // to make the board resetting automatically with the color of the board color
+
     }
 
     private void updateBoardSize() {
@@ -173,6 +175,7 @@ public class TicTacToeGUI {
         }
         // Makes a new board with the new size
         createBoard();
+
     }
 
     private void updateBoardColor() {
