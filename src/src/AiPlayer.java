@@ -4,7 +4,7 @@ AI player class implements different difficulty levels: easy, medium, and hard.
 import javax.swing.*;
 import java.util.Random;
 
-class AiPlayer extends Player {
+class AiPlayer {
     private String difficultyLvl; //Stores the difficulty level
     private String aiSymbol; //Stores the symbol of the human player
     private String humanSymbol;
@@ -20,8 +20,7 @@ class AiPlayer extends Player {
         this.game = game;
     }
 
-    //Makes a move based on the difficulty level chosen.
-    @Override
+    //Makes a move based on the difficulty level chosen
     public void makeMove() {
         switch (difficultyLvl) {
             case "Easy" :
@@ -50,78 +49,63 @@ class AiPlayer extends Player {
 
     //Medium move - tries to win if possible, tries to block opponent if needed, otherwise just makes an easy move.
     private void makeMediumMove() {
-        if (tryWinningMove(board)) return;
-        if (blockOpponentMove(board)) return;
-        makeEasyMove(board);
+        // Try to win if possible
+        for (int i = 0; i < game.getBoardSize(); i++) {
+            for (int j = 0; j < game.getBoardSize(); j++) {
+                if (game.isSpotEmpty(i, j)) {
+                    if (wouldWin(i, j, aiSymbol)) {
+                        game.makeAiMove(i, j, aiSymbol);
+                        return;
+                    }
+                }
+            }
+        }
+
+        // Block opponent if they can win
+        for (int i = 0; i < game.getBoardSize(); i++) {
+            for (int j = 0; j < game.getBoardSize(); j++) {
+                if (game.isSpotEmpty(i, j)) {
+                    if (wouldWin(i, j, humanSymbol)) {
+                        game.makeAiMove(i, j, aiSymbol);
+                        return;
+                    }
+                }
+            }
+        }
+
+        // Otherwise make a random move
+        makeEasyMove();
     }
 
     //Hard Move - uses the minimax algorithm to find the optimal move
-    private void makeHardMove(gameBoard board) {
-
-        //Finds the best move
-        int[] bestMove = findBestMove(board);
-        //plays the best move
-        board.updateBoard(bestMove[0], bestMove[1], getSymbol());
+    private void makeHardMove() {
+        int[] bestMove = findBestMove();
+        game.makeAiMove(bestMove[0], bestMove[1], aiSymbol);
     }
 
-    //Check if the AI can win in the next move and makes that move if available.
-    private boolean tryWinningMove(gameBoard board) {
-
-        for (int i = 0; i < 3; i++) {
-            for (int j = 0; j < 3; j++) {
-                if (board.isSpotEmpty(i, j)) {
-                    //Simulates the move
-                    board.updateBoard(i, j, getSymbol());
-                    boolean isWin = board.checkWin();
-                    //Undo move
-                    board.updateBoard(i, j, ' ');
-                    if (isWin) {
-                        board.updateBoard(i, j, getSymbol());
-                        retrun true;
-                    }
-                }
-            }
-        }
-        return false;
+    private boolean wouldWin(int row, int col, String symbol) {
+        // Simulate the move
+        game.getButton(row, col).setText(symbol);
+        boolean win = game.checkWinner();
+        // Undo the move
+        game.getButton(row, col).setText("");
+        return win;
     }
 
-    //Checks if the opponent can win with the next move and blocks them if they can.
-    private boolean blockOpponentMove(gameBoard board) {
-        for (int i = 0; i < 3; i++) {
-            for (int j = 0; j < 3; j++) {
-                if (board.isSpotEmpty(i, j)) {
-                    //Simulate opponent's move to win
-                    board.updateBoard(i, j, opponentSymbol);
-                    boolean isWin = board.checkWin();
-                    //undo the simulation
-                    board.updateBoard(i, j, ' ');
-                    //If opponent would win here, blocks them
-                    if (isWin) {
-                        board.updateBoard(i, j, getSymbol());
-                        return true;
-                    }
-                }
-            }
-        }
-        return false;//Returns false if the AI does not need to block the player.
-    }
+    //Finds the best move using minimax algorithm.
+    private int[] findBestMove() {
+        int bestScore = Integer.MIN_VALUE;
+        int[] bestMove = new int[]{-1, -1};
 
-    //Finds the best move using the minimax algorithm.
-    private int[] findBestMove(gameBoard board) {
-        int bestScore = Integer.MIN_VALUE; //Initialize with the worst possible score
-        int[] bestMove = new int[]{-1, -1}; //Initialize with invalid move
+        for (int i = 0; i < game.getBoardSize(); i++) {
+            for (int j = 0; j < game.getBoardSize(); j++) {
+                if (game.isSpotEmpty(i, j)) {
+                    // Try the move
+                    game.getButton(i, j).setText(aiSymbol);
+                    int score = minimax(0, false);
+                    // Undo the move
+                    game.getButton(i, j).setText("");
 
-        //Evaluates all moves possible
-        for (int i = 0; i < 3; i++) {
-            for (int j = 0; j < 3; j++) {
-                if(board.isSpotEmpty(i, j)) {
-                    //Try this move
-                    board.updateBoard(i, j, getSymbol());
-                    //Calculate score for this move (minimax with depth 0, minimizing turn)
-                    int score = minimax(board, 0, false);
-                    //Undo the move
-                    board.updateBoard(i, j, ' ');
-                    //Update best move if this score is better.
                     if (score > bestScore) {
                         bestScore = score;
                         bestMove[0] = i;
@@ -133,50 +117,39 @@ class AiPlayer extends Player {
         return bestMove;
     }
 
-    //Minimax algorithm implementation
-    private int minimax(gameBoard board, int depth, boolean isMaximizing) {
-        //Base cases
-        if (board.checkWin()) {
-            //checks if teh board is a win
-            //Subtract depth to prefer faster wins
+    private int minimax(int depth, boolean isMaximizing) {
+        // Check for terminal states
+        if (game.checkWinner()) {
             return isMaximizing ? -10 + depth : 10 - depth;
         }
-        if (board.isFull()) {
-            return 0; //draw
+
+        if (game.isBoardFull()) {
+            return 0;
         }
 
         if (isMaximizing) {
-            //AI trys to maximize score
+            // AI's turn - maximize score
             int bestScore = Integer.MIN_VALUE;
-            for (int i = 0; i < 3; i++) {
-                for (int j = 0; j < 3; j++) {
-                    if (board.isSpotEmpty(i, j)) {
-                        //Tries move
-                        board.updateBoard(i, j, getSymbol());
-                        //Recursively evaluate this move
-                        int score = minimax(board, depth + 1, false);
-                        //Undo the move
-                        board.updateBoard(i, j, ' ');
-                        //Tracks the best move
+            for (int i = 0; i < game.getBoardSize(); i++) {
+                for (int j = 0; j < game.getBoardSize(); j++) {
+                    if (game.isSpotEmpty(i, j)) {
+                        game.getButton(i, j).setText(aiSymbol);
+                        int score = minimax(depth + 1, false);
+                        game.getButton(i, j).setText("");
                         bestScore = Math.max(score, bestScore);
                     }
                 }
             }
             return bestScore;
-        }
-        else {
-            //Opponent's turn - try to minimize score
+        } else {
+            // Human's turn - minimize score
             int bestScore = Integer.MAX_VALUE;
-            for (int i = 0; i < 3; i++) {
-                for (int j = 0; j < 3; j++) {
-                    if (board.isSpotEmpty(i, j)) {
-                        //Simulate opponent's move
-                        board.updateBoard(i, j, opponentSymbol);
-                        //Recursively evaluate this move
-                        int score = minimax(board, depth + 1, true);
-                        //Undo the move
-                        board.updateBoard(i, j, ' ');
-                        //Track the worst score
+            for (int i = 0; i < game.getBoardSize(); i++) {
+                for (int j = 0; j < game.getBoardSize(); j++) {
+                    if (game.isSpotEmpty(i, j)) {
+                        game.getButton(i, j).setText(humanSymbol);
+                        int score = minimax(depth + 1, true);
+                        game.getButton(i, j).setText("");
                         bestScore = Math.min(score, bestScore);
                     }
                 }
