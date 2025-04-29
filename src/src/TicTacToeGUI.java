@@ -35,7 +35,7 @@ public class TicTacToeGUI {
     private void initializeGUI(){
         frame = new JFrame("Tic-Tac-Toe");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setSize(600, 500);
+        frame.setSize(900, 900);
         frame.setLayout(new BorderLayout());
 
         // Control Panel (Top)
