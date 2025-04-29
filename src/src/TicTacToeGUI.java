@@ -258,6 +258,10 @@ public class TicTacToeGUI {
     }
 
     public boolean checkWinner(boolean simulated) {
+        if (!simulated) {
+            clearHighlights();
+        }
+
         for (int i = 0; i < boardSize; i++) {
             if (isWinningLine(i, 0, 0, 1, simulated) ||
                 isWinningLine(0, i, 1, 0, simulated)) {
@@ -267,9 +271,17 @@ public class TicTacToeGUI {
         return isWinningLine(0, 0, 1, 1, simulated) || isWinningLine(0, boardSize - 1, 1, -1, simulated);
     }
 
+    private void clearHighlights() {
+        for (int i = 0; i < boardSize; i++) {
+            for (int j = 0; j < boardSize; j++) {
+                buttons[i][j].setBackground(null);
+            }
+        }
+    }
+
     private boolean isWinningLine(int startX, int startY, int dx, int dy, boolean simulated) {
         String first = buttons[startX][startY].getText();
-        if (first.equals("")) return false;
+        if (first.isEmpty()) return false;
         for (int i = 1; i < boardSize; i++) {
             int x = startX + i * dx;
             int y = startY + i * dy;

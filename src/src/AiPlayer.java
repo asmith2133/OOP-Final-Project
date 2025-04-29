@@ -60,32 +60,68 @@ public class AiPlayer {
      * Medium difficulty - tries to win or block opponent.
      */
     private void makeMediumMove() {
-        // Try to win if possible
-        for (int i = 0; i < game.getBoardSize(); i++) {
-            for (int j = 0; j < game.getBoardSize(); j++) {
-                if (game.isSpotEmpty(i, j)) {
-                    if (wouldWin(i, j, aiSymbol, false)) {
-                        game.makeAiMove(i, j, aiSymbol);
-                        return;
-                    }
-                }
-            }
-        }
+        int needed = getNeededToWin() - 1;
 
-        // Block opponent if they can win
-        for (int i = 0; i < game.getBoardSize(); i++) {
-            for (int j = 0; j < game.getBoardSize(); j++) {
-                if (game.isSpotEmpty(i, j)) {
-                    if (wouldWin(i, j, humanSymbol, false)) {
-                        game.makeAiMove(i, j, aiSymbol);
-                        return;
-                    }
-                }
-            }
-        }
+        //try to win
+        if (tryCompleteLine(aiSymbol, needed)) return;
+
+        //block opponent
+        if (tryCompleteLine(humanSymbol, needed)) return;
 
         // Otherwise make a random move
         makeEasyMove();
+    }
+
+    private boolean tryCompleteLine(String symbol, int needed) {
+        for (int i = 0; i < game.getBoardSize(); i++){
+            for (int j = 0; j < game.getBoardSize(); j++){
+                if (game.isSpotEmpty(i, j) && wouldCompleteLine(i, j, symbol, needed)) {
+                    game.makeAiMove(i, j, aiSymbol);
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private boolean wouldCompleteLine(int row, int column, String symbol, int needed) {
+        return checkPartialLine(row, column, 1, 0, symbol, needed) ||
+                checkPartialLine(row, column, 0, 1, symbol, needed) ||
+                checkPartialLine(row, column, 1, 1, symbol, needed) ||
+                checkPartialLine(row, column, 1, -1, symbol, needed);
+    }
+
+    private boolean checkPartialLine(int row, int col, int dx, int dy, String symbol, int needed) {
+        int size = game.getBoardSize();
+        int total = 1; // Count the current (empty) spot we're checking
+
+        // Check in positive direction
+        for (int i = 1; i < needed; i++) {
+            int x = row + i * dx;
+            int y = col + i * dy;
+            if (x < 0 || x >= size || y < 0 || y >= size) break;
+            String spot = game.getButton(x, y).getText();
+            if (spot.equals(symbol)) {
+                total++;
+            } else if (!spot.isEmpty()) {
+                break; // Opponent's symbol blocks the line
+            }
+        }
+
+        // Check in negative direction
+        for (int i = 1; i < needed; i++) {
+            int x = row - i * dx;
+            int y = col - i * dy;
+            if (x < 0 || x >= size || y < 0 || y >= size) break;
+            String spot = game.getButton(x, y).getText();
+            if (spot.equals(symbol)) {
+                total++;
+            } else if (!spot.isEmpty()) {
+                break; // Opponent's symbol blocks the line
+            }
+        }
+
+        return total >= needed;
     }
 
     /**
@@ -103,10 +139,52 @@ public class AiPlayer {
         String originalText = game.getButton(row, column).getText();
         // Simulate the move
         game.getButton(row, column).setText(symbol);
-        boolean win = game.checkWinner(simulated);
+        int neededToWin = getNeededToWin();
+        boolean win = checkWinAround(row, column, symbol, neededToWin);
         // Undo the move
         game.getButton(row, column).setText(originalText);
         return win;
+    }
+
+    private int getNeededToWin() {
+        int size = game.getBoardSize();
+        return size >= 5 ? 5 : (size == 4 ? 4 : 3);
+    }
+
+    private boolean checkWinAround(int row, int column, String symbol, int neededToWin) {
+        return checkDirection(row,column, 1, 0, symbol, neededToWin)||
+               checkDirection(row,column, 0, 1, symbol, neededToWin)||
+               checkDirection(row,column, 1, 1, symbol, neededToWin)||
+               checkDirection(row,column, 1, -1, symbol, neededToWin);
+    }
+
+    private boolean checkDirection(int row, int column, int dx, int dy, String symbol, int neededToWin) {
+        int count = 1;
+        int size = game.getBoardSize();
+
+        //Search in positive direction
+        for (int i = 1; i < neededToWin; i++) {
+            int x = row + i * dx;
+            int y = column + i * dy;
+            if (x < 0 || x >= size || y < 0 || y >= size ||
+                    !game.getButton(x, y).getText().equals(symbol)) {
+                break;
+            }
+            count++;
+        }
+
+        // Search in negative direction
+        for (int i = 1; i < neededToWin; i++) {
+            int x = row - i * dx;
+            int y = column - i * dy;
+            if (x < 0 || x >= size || y < 0 || y >= size ||
+                    !game.getButton(x, y).getText().equals(symbol)) {
+                break;
+            }
+            count++;
+        }
+
+        return count >= neededToWin;
     }
 
     /**
@@ -142,11 +220,15 @@ public class AiPlayer {
     private int minimax(int depth, boolean isMaximizing) {
         // Check for terminal states
         if (game.checkWinner(true)) {
-            return isMaximizing ? -10 + depth : 10 - depth;
+            return isMaximizing ? -100 + depth : 100 - depth;
         }
 
         if (game.isBoardFull()) {
             return 0;
+        }
+
+        if (depth >= (game.getBoardSize() > 3 ? 3 : 5)) {
+            return evaluateBoard();
         }
 
         if (isMaximizing) {
@@ -178,5 +260,20 @@ public class AiPlayer {
             }
             return bestScore;
         }
+    }
+
+    private int evaluateBoard() {
+        int score = 0;
+        int needed = getNeededToWin();
+
+        for (int i = 0; i < game.getBoardSize(); i++) {
+            for (int j = 0; j < game.getBoardSize(); j++) {
+                if (game.isSpotEmpty(i, j)) {
+                    if (wouldWin(i, j, aiSymbol, true)) score += 10;
+                    if (wouldWin(i, j, humanSymbol, true)) score -= 8;
+                }
+            }
+        }
+        return score;
     }
 }
