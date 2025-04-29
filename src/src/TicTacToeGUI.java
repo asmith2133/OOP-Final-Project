@@ -1,5 +1,7 @@
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 
 public class TicTacToeGUI {
     private JFrame frame;
@@ -17,12 +19,20 @@ public class TicTacToeGUI {
     private boolean gameOver = false;
     private boolean isHumanVsAI = true; // Set the Default as AI
     private AiPlayer aiPlayer;
+    private String aiSymbol;
 
     public TicTacToeGUI(String startingPlayer, boolean isHumanVsAI) {
         this.currentPlayer = startingPlayer; // Set the starting player based on the selection
         this.isHumanVsAI = isHumanVsAI; // Set the starting player to an AI based on the selection
 
+        if (isHumanVsAI) {
+            this.aiSymbol = startingPlayer.equals("X") ? "O" : "X";
+        }
 
+        initializeGUI();
+    }
+
+    private void initializeGUI(){
         frame = new JFrame("Tic-Tac-Toe");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setSize(600, 500);
@@ -37,30 +47,6 @@ public class TicTacToeGUI {
         playerColorBox = new JComboBox<>(new String[]{"Black", "Red", "Green"});
         opponentColorBox = new JComboBox<>(new String[]{"Red", "Green", "Blue"});
         boardSizeBox = new JComboBox<>(new String[]{"3x3", "4x4", "5x5"});
-
-        if (isHumanVsAI){
-            String aiSymbol = startingPlayer.equals("X") ? "O" : "X";
-            //Initialize with easy difficulty
-            aiPlayer = new AiPlayer(aiSymbol, this);
-
-            //Set the combobox to easy
-            difficultyBox.setSelectedItem("Easy");
-
-            //If AI goes first, makes a move
-            if (startingPlayer.equals(aiSymbol)) {
-                SwingUtilities.invokeLater(() -> {
-                    aiPlayer.makeMove();
-                });
-            }
-        }
-
-        if (isHumanVsAI){
-            difficultyBox.addActionListener(e -> {
-                if (aiPlayer != null) {
-                    aiPlayer.setDifficulty((String) difficultyBox.getSelectedItem());
-                }
-            });
-        }
 
         // Customize Combo Boxes
         customizeComboBox(boardColorBox);
@@ -128,6 +114,13 @@ public class TicTacToeGUI {
         bottomPanel.add(resetButton);
         bottomPanel.add(quitButton);
         frame.add(bottomPanel, BorderLayout.SOUTH);
+
+        if (isHumanVsAI) {
+            aiPlayer = new AiPlayer((String) difficultyBox.getSelectedItem(), aiSymbol, this);
+            if (currentPlayer.equals(aiSymbol)) {
+                SwingUtilities.invokeLater(() -> aiPlayer.makeMove());
+            }
+        }
 
         // Display the frame
         frame.setVisible(true);
@@ -276,7 +269,7 @@ public class TicTacToeGUI {
     public boolean isBoardFull() {
         for (int i = 0; i < boardSize; i++)
             for (int j = 0; j < boardSize; j++)
-                if (buttons[i][j].getText().equals("")) return false;
+                if (buttons[i][j].getText().isEmpty()) return false;
         return true;
     }
 
@@ -374,34 +367,28 @@ public class TicTacToeGUI {
         playerFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         playerFrame.setSize(400, 200);
 
-        Player playerPanel = new Player(new Player.PlayerSelectionListener() {
-            @Override
-            public void onPlayerSelected(String player) {
-                // Close the player selection window
-                playerFrame.dispose();
+        Player playerPanel = new Player(player -> {
+            // Close the player selection window
+            playerFrame.dispose();
 
-                // Create the Adversary selection frame
-                JFrame adversaryFrame = new JFrame("Adversary Selection");
-                adversaryFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-                adversaryFrame.setSize(400, 200);
+            // Create the Adversary selection frame
+            JFrame adversaryFrame = new JFrame("Adversary Selection");
+            adversaryFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+            adversaryFrame.setSize(400, 200);
 
-                Adversary adversaryPanel = new Adversary(e -> {
-                    // This ActionListener is called when either Human or AI button is clicked
-                    JButton source = (JButton) e.getSource();
-                    boolean vsAI = source.getText().equals("AI");
+            Adversary adversaryPanel = new Adversary(e -> {
+                // This ActionListener is called when either Human or AI button is clicked
+                boolean isHumanVsAI = e.getActionCommand().equals("true");
 
-                    // Close the adversary selection window
-                    adversaryFrame.dispose();
+                // Close the adversary selection window
+                adversaryFrame.dispose();
 
-                    // Create and display the Tic-Tac-Toe game window with the selected player and opponent type
-                    SwingUtilities.invokeLater(() -> {
-                        new TicTacToeGUI(player, vsAI);  // Pass the selected player (X or O) and whether it's vs AI
-                    });
-                });
+                // Create and display the Tic-Tac-Toe game window with the selected player and opponent type
+                new TicTacToeGUI(player, isHumanVsAI);
+            });
 
-                adversaryFrame.add(adversaryPanel);
-                adversaryFrame.setVisible(true);
-            }
+            adversaryFrame.add(adversaryPanel);
+            adversaryFrame.setVisible(true);
         });
 
         playerFrame.add(playerPanel);

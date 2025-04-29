@@ -1,5 +1,6 @@
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
 public class Adversary extends JPanel {
@@ -20,7 +21,8 @@ public class Adversary extends JPanel {
         HumanAd.addActionListener(e -> {
             // Set the game mode to Human vs Human
             // Call the startGameListener to initiate the TicTacToeGUI (Human vs Human)
-            startGameListener.actionPerformed(e); // This will trigger starting the human vs human game
+            startGameListener.actionPerformed(new ActionEvent(this,
+                    ActionEvent.ACTION_PERFORMED, "false")); // This will trigger starting the human vs human game
         });
 
         // ActionListener for the "AI" button
@@ -28,7 +30,8 @@ public class Adversary extends JPanel {
             // Set the game mode to Human vs AI
             // Here, you would handle AI game setup, for now we just start the AI mode
             // You might need a separate action to handle AI-specific logic
-            startGameListener.actionPerformed(e); // This would start the AI game mode (you can handle this separately)
+            startGameListener.actionPerformed(new ActionEvent(this,
+                    ActionEvent.ACTION_PERFORMED, "true")); // This would start the AI game mode (you can handle this separately)
         });
 
         // Add components to the panel
