@@ -2,6 +2,7 @@
 AI player class implements different difficulty levels: easy, medium, and hard.
  */
 
+import javax.swing.*;
 import java.util.Random;
 
 public class AiPlayer {
@@ -10,14 +11,9 @@ public class AiPlayer {
     private String humanSymbol;
     private TicTacToeGUI game;
 
-    public AiPlayer(String aiSymbol, TicTacToeGUI game) {
-        this.aiSymbol = aiSymbol;
-        this.humanSymbol = aiSymbol.equals("X") ? "O" : "X";
-        this.game = game;
-    }
 
-    public AiPlayer(String difficulty, String aiSymbol, TicTacToeGUI game) {
-        this.difficulty = difficulty;
+    public AiPlayer(String aiSymbol, TicTacToeGUI game) {
+        this.difficulty = "Easy";
         this.aiSymbol = aiSymbol;
         this.humanSymbol = aiSymbol.equals("X") ? "O" : "X";
         this.game = game;
@@ -31,17 +27,19 @@ public class AiPlayer {
      * Makes a move based on the selected difficulty level.
      */
     public void makeMove() {
-        switch (difficulty) {
-            case "Easy":
-                makeEasyMove();
-                break;
-            case "Medium":
-                makeMediumMove();
-                break;
-            case "Hard":
-                makeHardMove();
-                break;
-        }
+        SwingUtilities.invokeLater(() -> {
+            switch (difficulty) {
+                case "Easy":
+                    makeEasyMove();
+                    break;
+                case "Medium":
+                    makeMediumMove();
+                    break;
+                case "Hard":
+                    makeHardMove();
+                    break;
+            }
+        });
     }
 
     /**
@@ -66,7 +64,7 @@ public class AiPlayer {
         for (int i = 0; i < game.getBoardSize(); i++) {
             for (int j = 0; j < game.getBoardSize(); j++) {
                 if (game.isSpotEmpty(i, j)) {
-                    if (wouldWin(i, j, aiSymbol)) {
+                    if (wouldWin(i, j, aiSymbol, false)) {
                         game.makeAiMove(i, j, aiSymbol);
                         return;
                     }
@@ -78,7 +76,7 @@ public class AiPlayer {
         for (int i = 0; i < game.getBoardSize(); i++) {
             for (int j = 0; j < game.getBoardSize(); j++) {
                 if (game.isSpotEmpty(i, j)) {
-                    if (wouldWin(i, j, humanSymbol)) {
+                    if (wouldWin(i, j, humanSymbol, false)) {
                         game.makeAiMove(i, j, aiSymbol);
                         return;
                     }
@@ -101,12 +99,13 @@ public class AiPlayer {
     /**
      * Checks if placing a symbol at (row, col) would result in a win.
      */
-    private boolean wouldWin(int row, int col, String symbol) {
+    private boolean wouldWin(int row, int column, String symbol, boolean simulated) {
+        String originalText = game.getButton(row, column).getText();
         // Simulate the move
-        game.getButton(row, col).setText(symbol);
-        boolean win = game.checkWinner();
+        game.getButton(row, column).setText(symbol);
+        boolean win = game.checkWinner(simulated);
         // Undo the move
-        game.getButton(row, col).setText("");
+        game.getButton(row, column).setText(originalText);
         return win;
     }
 
@@ -142,7 +141,7 @@ public class AiPlayer {
      */
     private int minimax(int depth, boolean isMaximizing) {
         // Check for terminal states
-        if (game.checkWinner()) {
+        if (game.checkWinner(true)) {
             return isMaximizing ? -10 + depth : 10 - depth;
         }
 

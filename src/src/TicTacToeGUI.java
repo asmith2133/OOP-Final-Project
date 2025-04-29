@@ -27,9 +27,20 @@ public class TicTacToeGUI {
 
         if (isHumanVsAI) {
             this.aiSymbol = startingPlayer.equals("X") ? "O" : "X";
+            this.aiPlayer = new AiPlayer(aiSymbol, this);
+        }
+        initializeGUI();
+
+        if (isHumanVsAI) {
+            this.aiSymbol = startingPlayer.equals("X") ? "O" : "X";
+            this.aiPlayer = new AiPlayer(aiSymbol, this);
+
+            if (currentPlayer.equals(aiSymbol)) {
+                aiPlayer.makeMove();
+            }
         }
 
-        initializeGUI();
+
     }
 
     private void initializeGUI(){
@@ -43,6 +54,11 @@ public class TicTacToeGUI {
         controlPanel.setLayout(new BoxLayout(controlPanel, BoxLayout.Y_AXIS));
 
         difficultyBox = new JComboBox<>(new String[]{"Easy", "Medium", "Hard"});
+        difficultyBox.addActionListener(e -> {
+            if (aiPlayer != null) {
+                aiPlayer.setDifficulty((String)difficultyBox.getSelectedItem());
+            }
+        });
         boardColorBox = new JComboBox<>(new String[]{"Gray", "White", "Blue"});
         playerColorBox = new JComboBox<>(new String[]{"Black", "Red", "Green"});
         opponentColorBox = new JComboBox<>(new String[]{"Red", "Green", "Blue"});
@@ -116,7 +132,7 @@ public class TicTacToeGUI {
         frame.add(bottomPanel, BorderLayout.SOUTH);
 
         if (isHumanVsAI) {
-            aiPlayer = new AiPlayer((String) difficultyBox.getSelectedItem(), aiSymbol, this);
+            aiPlayer = new AiPlayer(aiSymbol, this);
             if (currentPlayer.equals(aiSymbol)) {
                 SwingUtilities.invokeLater(() -> aiPlayer.makeMove());
             }
@@ -146,7 +162,7 @@ public class TicTacToeGUI {
                         } else {
                             sourceButton.setForeground(oColor); // Set O color
                         }
-                        if (checkWinner()) {
+                        if (checkWinner(false)) {
                             // Play win/lose sound depending on who won
                             if (isHumanVsAI && !currentPlayer.equals("X")) {
                                 new Thread(() -> SoundPlayer.playSound("sounds/lose.wav")).start();  // Human wins, AI loses
@@ -241,16 +257,17 @@ public class TicTacToeGUI {
         }
     }
 
-    public boolean checkWinner() {
+    public boolean checkWinner(boolean simulated) {
         for (int i = 0; i < boardSize; i++) {
-            if (isWinningLine(i, 0, 0, 1) || isWinningLine(0, i, 1, 0)) {
+            if (isWinningLine(i, 0, 0, 1, simulated) ||
+                isWinningLine(0, i, 1, 0, simulated)) {
                 return true;
             }
         }
-        return isWinningLine(0, 0, 1, 1) || isWinningLine(0, boardSize - 1, 1, -1);
+        return isWinningLine(0, 0, 1, 1, simulated) || isWinningLine(0, boardSize - 1, 1, -1, simulated);
     }
 
-    private boolean isWinningLine(int startX, int startY, int dx, int dy) {
+    private boolean isWinningLine(int startX, int startY, int dx, int dy, boolean simulated) {
         String first = buttons[startX][startY].getText();
         if (first.equals("")) return false;
         for (int i = 1; i < boardSize; i++) {
@@ -258,10 +275,12 @@ public class TicTacToeGUI {
             int y = startY + i * dy;
             if (!buttons[x][y].getText().equals(first)) return false;
         }
-        for (int i = 0; i < boardSize; i++) {
-            int x = startX + i * dx;
-            int y = startY + i * dy;
-            buttons[x][y].setBackground(Color.GREEN);
+        if (!simulated) {
+            for (int i = 0; i < boardSize; i++) {
+                int x = startX + i * dx;
+                int y = startY + i * dy;
+                buttons[x][y].setBackground(Color.GREEN);
+            }
         }
         return true;
     }
@@ -359,6 +378,11 @@ public class TicTacToeGUI {
 
     private void switchPlayer() {
         currentPlayer = currentPlayer.equals("X") ? "O" : "X";
+
+        if (isHumanVsAI && currentPlayer.equals(aiSymbol) && !gameOver) {
+            aiPlayer.setDifficulty((String) difficultyBox.getSelectedItem());
+            aiPlayer.makeMove();
+        }
     }
 
     public static void main(String[] args) {
@@ -429,7 +453,7 @@ public class TicTacToeGUI {
         buttons[row][col].setText(symbol);
         buttons[row][col].setForeground(playerColor);
 
-        if (checkWinner()) {
+        if (checkWinner(false)) {
             JOptionPane.showMessageDialog(frame, symbol + " wins!");
             updateScore();
             disableBoard();
